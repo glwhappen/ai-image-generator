@@ -15,7 +15,7 @@ export function ProviderSelector({
   onProviderChange,
   disabled = false,
 }: ProviderSelectorProps) {
-  const providers: ApiProvider[] = ['gemini', 'openai'];
+  const providers: ApiProvider[] = ['doubao', 'gemini', 'openai'];
 
   return (
     <div className="space-y-2">
@@ -42,6 +42,9 @@ export function ProviderSelector({
             >
               <span className="text-xl">{info.icon}</span>
               <span className="text-sm font-medium">{info.name}</span>
+              {provider === 'doubao' && (
+                <span className="text-[10px] text-green-600 bg-green-500/10 px-1 py-0.5 rounded">免费</span>
+              )}
             </Button>
           );
         })}

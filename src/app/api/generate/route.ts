@@ -5,13 +5,15 @@ interface GenerateRequest {
   prompt: string;
   model: string;
   provider: ApiProvider;
-  baseUrl: string;
-  apiKey: string;
+  baseUrl?: string;
+  apiKey?: string;
   // Gemini 参数
   aspectRatio?: string;
   imageSize?: string;
   // OpenAI 参数
   size?: string;
+  // 豆包参数
+  doubaoSize?: string;
   // 参考图片（图生图）
   referenceImage?: string;
   referenceImageMime?: string;
@@ -53,11 +55,13 @@ export async function POST(request: NextRequest) {
       aspectRatio,
       imageSize,
       size,
+      doubaoSize,
       referenceImage,
       referenceImageMime,
     } = body;
 
-    if (!baseUrl || !apiKey) {
+    // 豆包不需要用户配置 baseUrl/apiKey
+    if (provider !== 'doubao' && (!baseUrl || !apiKey)) {
       return NextResponse.json(
         { error: '请先配置 API Base URL 和 API Key' },
         { status: 400 }
@@ -74,6 +78,8 @@ export async function POST(request: NextRequest) {
     // 根据提供商选择不同的 API 格式
     if (provider === 'openai') {
       return await handleOpenAIRequest(body);
+    } else if (provider === 'doubao') {
+      return await handleDoubaoRequest(body);
     } else {
       return await handleGeminiRequest(body);
     }
@@ -88,7 +94,7 @@ export async function POST(request: NextRequest) {
 
 // 处理 OpenAI 格式的请求
 async function handleOpenAIRequest(body: GenerateRequest) {
-  const { prompt, model, baseUrl, apiKey, size, referenceImage, referenceImageMime } = body;
+  const { prompt, model, baseUrl = '', apiKey = '', size, referenceImage, referenceImageMime } = body;
   
   const cleanBaseUrl = baseUrl.replace(/\/$/, '');
   
@@ -210,7 +216,7 @@ async function handleOpenAIRequest(body: GenerateRequest) {
 
 // 处理 Gemini 格式的请求
 async function handleGeminiRequest(body: GenerateRequest) {
-  const { prompt, model, baseUrl, apiKey, aspectRatio, imageSize, referenceImage, referenceImageMime } = body;
+  const { prompt, model, baseUrl = '', apiKey = '', aspectRatio, imageSize, referenceImage, referenceImageMime } = body;
 
   // 构建 parts 数组
   const parts: Array<{ text?: string; inlineData?: { mimeType: string; data: string } }> = [];
@@ -332,5 +338,101 @@ async function handleGeminiRequest(body: GenerateRequest) {
     provider: 'gemini',
     aspectRatio,
     imageSize,
+  });
+}
+
+// 处理豆包格式的请求
+async function handleDoubaoRequest(body: GenerateRequest) {
+  const { prompt, model, doubaoSize } = body;
+
+  const doubaoBaseUrl = process.env.DOUBAO_BASE_URL || 'https://visual.volcengineapi.com';
+  const doubaoApiKey = process.env.DOUBAO_API_KEY;
+
+  if (!doubaoApiKey) {
+    return NextResponse.json(
+      { error: '豆包服务暂未配置，请稍后再试' },
+      { status: 503 }
+    );
+  }
+
+  const cleanBaseUrl = doubaoBaseUrl.replace(/\/$/, '');
+  const apiUrl = `${cleanBaseUrl}/v1/images/generations`;
+
+  console.log('Calling Doubao API:', apiUrl);
+
+  const requestBody: Record<string, unknown> = {
+    model: model || 'doubao-seedream-4-5-251128',
+    prompt,
+    n: 1,
+  };
+
+  if (doubaoSize) {
+    requestBody.size = doubaoSize;
+  }
+
+  const response = await fetch(apiUrl, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${doubaoApiKey}`,
+    },
+    body: JSON.stringify(requestBody),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    console.error('Doubao API error:', response.status, errorText);
+
+    try {
+      const errorJson = JSON.parse(errorText);
+      return NextResponse.json(
+        { error: errorJson.error?.message || errorJson.message || `豆包 API 请求失败: ${response.status}` },
+        { status: response.status }
+      );
+    } catch {
+      return NextResponse.json(
+        { error: `豆包 API 请求失败: ${response.status} - ${errorText}` },
+        { status: response.status }
+      );
+    }
+  }
+
+  const data = await response.json();
+  console.log('Doubao API response status:', response.status);
+
+  // 豆包返回格式: { data: [{ url: "..." }] }
+  let imageData: string | null = null;
+  let mimeType = 'image/png';
+
+  if (data.data && data.data.length > 0) {
+    const imageUrl = data.data[0].url || data.data[0].b64_json;
+    if (data.data[0].b64_json) {
+      imageData = data.data[0].b64_json;
+    } else if (imageUrl) {
+      // 下载图片并转为 base64
+      const imgResponse = await fetch(imageUrl);
+      if (imgResponse.ok) {
+        const imgBuffer = Buffer.from(await imgResponse.arrayBuffer());
+        imageData = imgBuffer.toString('base64');
+        mimeType = imgResponse.headers.get('content-type') || 'image/png';
+      }
+    }
+  }
+
+  if (!imageData) {
+    return NextResponse.json(
+      { error: '豆包未生成图片，请重试' },
+      { status: 500 }
+    );
+  }
+
+  return NextResponse.json({
+    success: true,
+    image: {
+      data: imageData,
+      mimeType,
+    },
+    provider: 'doubao',
+    doubaoSize,
   });
 }

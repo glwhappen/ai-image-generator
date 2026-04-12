@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ImageViewer } from '@/components/ImageViewer';
 import { ImagePreviewPanel, type PreviewImageInfo } from '@/components/ImagePreviewPanel';
-import { Image as ImageIcon, Loader2, Download, Copy, Sparkles, Bot, Check, ImageIcon as RefImageIcon, RefreshCw, ThumbsUp, ThumbsDown, Eye, Flame, Clock, Share2 } from 'lucide-react';
+import { Image as ImageIcon, Loader2, Download, Copy, Sparkles, Bot, Check, ImageIcon as RefImageIcon, RefreshCw, ThumbsUp, ThumbsDown, Eye, Flame, Clock, Share2, Palette } from 'lucide-react';
 import Link from 'next/link';
 import { SmartMasonry } from '@/components/SmartMasonry';
 import {
@@ -50,6 +50,9 @@ function getSizeText(image: PublicImage): string | null {
   // 回退到配置中的尺寸信息
   const config = image.config;
   
+  if (image.provider === 'doubao' && config?.doubaoSize) {
+    return config.doubaoSize as string;
+  }
   if (image.provider === 'gemini' && config?.aspectRatio && config?.imageSize) {
     return `${config.aspectRatio} · ${config.imageSize}`;
   }
@@ -758,7 +761,11 @@ function GalleryContent() {
                         {/* 提供商标识 */}
                         {!hasError && (
                           <div className="absolute top-2 left-2 z-20 flex items-center gap-1">
-                            {image.provider === 'gemini' ? (
+                            {image.provider === 'doubao' ? (
+                              <div className="bg-orange-500/80 rounded-full p-1">
+                                <Palette className="h-3 w-3 text-white" />
+                              </div>
+                            ) : image.provider === 'gemini' ? (
                               <div className="bg-primary/80 rounded-full p-1">
                                 <Sparkles className="h-3 w-3 text-white" />
                               </div>

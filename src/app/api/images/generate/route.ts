@@ -8,11 +8,12 @@ interface GenerateRequest {
   prompt: string;
   model: string;
   provider: ApiProvider;
-  baseUrl: string;
-  apiKey: string;
+  baseUrl?: string;
+  apiKey?: string;
   aspectRatio?: string;
   imageSize?: string;
   size?: string;
+  doubaoSize?: string;
   // 参考图片（图生图）
   referenceImage?: string;
   referenceImageMime?: string;
@@ -26,13 +27,18 @@ export async function POST(request: NextRequest) {
     const body: GenerateRequest = await request.json();
     const { 
       userId, prompt, model, provider, baseUrl, apiKey, 
-      aspectRatio, imageSize, size,
+      aspectRatio, imageSize, size, doubaoSize,
       referenceImage, referenceImageMime,
       isPublic
     } = body;
     
-    if (!userId || !prompt || !model || !provider || !baseUrl || !apiKey) {
+    if (!userId || !prompt || !model || !provider) {
       return NextResponse.json({ error: '缺少必要参数' }, { status: 400 });
+    }
+    
+    // 非豆包供应商需要 baseUrl 和 apiKey
+    if (provider !== 'doubao' && (!baseUrl || !apiKey)) {
+      return NextResponse.json({ error: '缺少 API 配置' }, { status: 400 });
     }
     
     const client = getSupabaseClient();
@@ -65,6 +71,7 @@ export async function POST(request: NextRequest) {
           aspectRatio,
           imageSize,
           size,
+          doubaoSize,
           hasReferenceImage: !!referenceImage,
           referenceImageUrl, // 存储参考图 URL
         },
@@ -80,7 +87,7 @@ export async function POST(request: NextRequest) {
     
     // 启动后台生成任务（不等待结果）
     generateImageAsync(imageId, {
-      prompt, model, provider, baseUrl, apiKey, aspectRatio, imageSize, size,
+      prompt, model, provider, baseUrl, apiKey, aspectRatio, imageSize, size, doubaoSize,
       referenceImage, referenceImageMime
     }).catch(error => {
       console.error('Background generation error:', error);
@@ -103,11 +110,12 @@ async function generateImageAsync(
     prompt: string;
     model: string;
     provider: ApiProvider;
-    baseUrl: string;
-    apiKey: string;
+    baseUrl?: string;
+    apiKey?: string;
     aspectRatio?: string;
     imageSize?: string;
     size?: string;
+    doubaoSize?: string;
     referenceImage?: string;
     referenceImageMime?: string;
   }
@@ -122,11 +130,13 @@ async function generateImageAsync(
       .eq('id', imageId);
     
     // 根据提供商调用不同的生成 API
-    const { prompt, model, provider, baseUrl, apiKey, aspectRatio, imageSize, size, referenceImage, referenceImageMime } = params;
+    const { prompt, model, provider, baseUrl = '', apiKey = '', aspectRatio, imageSize, size, doubaoSize, referenceImage, referenceImageMime } = params;
     
     let imageUrl: string | null = null;
     
-    if (provider === 'openai') {
+    if (provider === 'doubao') {
+      imageUrl = await callDoubao({ prompt, model, doubaoSize });
+    } else if (provider === 'openai') {
       imageUrl = await callOpenAI({ prompt, model, baseUrl, apiKey, size, referenceImage, referenceImageMime });
     } else {
       imageUrl = await callGemini({ prompt, model, baseUrl, apiKey, aspectRatio, imageSize, referenceImage, referenceImageMime });
@@ -196,6 +206,59 @@ async function generateImageAsync(
       })
       .eq('id', imageId);
   }
+}
+
+// 调用豆包格式的 API（Coze 集成）
+const DOUBAO_API_URL = 'https://integration.coze.cn/api/v3/images/generations';
+const DOUBAO_BEARER_TOKEN = 'Bearer UXFMU2luMGp4MzlZNmQzVlhtWTdISkFjV25idHRCY3g6UDhzRXpNTDJ4d1E4N3FOSlNVaHpyMElBeFdkbTUzZFNYR2hnVXBrSDI0S2ZCZnd5ajV4d0IyMHp1SURqYnNGNg==';
+
+async function callDoubao(params: {
+  prompt: string;
+  model: string;
+  doubaoSize?: string;
+}): Promise<string | null> {
+  const { prompt, model, doubaoSize } = params;
+  
+  const requestBody: Record<string, unknown> = {
+    model,
+    prompt,
+    n: 1,
+    size: doubaoSize || '2k',
+    response_format: 'url',
+  };
+  
+  const response = await fetch(DOUBAO_API_URL, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': DOUBAO_BEARER_TOKEN,
+    },
+    body: JSON.stringify(requestBody),
+  });
+  
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`豆包 API 请求失败: ${response.status} - ${errorText}`);
+  }
+  
+  const data = await response.json();
+  
+  // 响应格式：{ data: [{ url, size }] }
+  if (data.data?.[0]?.url) {
+    const imgUrl = data.data[0].url;
+    // 下载 URL 图片并转为 base64（后续统一上传到对象存储）
+    const imgResponse = await fetch(imgUrl);
+    const imgBuffer = Buffer.from(await imgResponse.arrayBuffer());
+    const base64 = imgBuffer.toString('base64');
+    const mimeType = imgResponse.headers.get('content-type') || 'image/jpeg';
+    return `data:${mimeType};base64,${base64}`;
+  }
+  
+  if (data.error) {
+    throw new Error(`豆包 API 错误: ${data.error.message || JSON.stringify(data.error)}`);
+  }
+  
+  return null;
 }
 
 // 调用 OpenAI 格式的 API

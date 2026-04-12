@@ -1,5 +1,5 @@
 // API 提供商类型
-export type ApiProvider = 'gemini' | 'openai';
+export type ApiProvider = 'doubao' | 'gemini' | 'openai';
 
 // 单个供应商配置
 export interface ProviderConfig {
@@ -50,6 +50,14 @@ export interface AspectRatioOption {
   description: string;
 }
 
+// 豆包尺寸选项
+export interface DoubaoSizeOption {
+  id: string;
+  label: string;
+  value: string;
+  description: string;
+}
+
 // OpenAI 尺寸选项
 export interface OpenAISizeOption {
   id: string;
@@ -64,6 +72,7 @@ export interface ApiConfig {
   currentProvider: ApiProvider;
   // 各供应商配置
   providers: {
+    doubao: ProviderConfig;
     gemini: ProviderConfig;
     openai: ProviderConfig;
   };
@@ -74,6 +83,8 @@ export interface ApiConfig {
   imageSize: string;
   // OpenAI 参数
   openaiSize: string;
+  // 豆包参数
+  doubaoSize: string;
   useCustomSize: boolean;
 }
 
@@ -134,8 +145,16 @@ export const OPENAI_SIZES: OpenAISizeOption[] = [
   { id: '1024x1536', label: '竖版', value: '1024x1536', description: '1024×1536' },
 ];
 
+// 豆包尺寸选项
+export const DOUBAO_SIZES: DoubaoSizeOption[] = [
+  { id: '2k', label: '2K', value: '2k', description: '2048×2048' },
+  { id: '4k', label: '4K', value: '4k', description: '4096×4096' },
+];
+
 // 已知的绘图模型（用于识别 API 类型）
 export const KNOWN_MODELS: Record<string, ApiProvider> = {
+  // 豆包系列
+  'doubao-seedream': 'doubao',
   // Gemini 系列
   'gemini-2.0-flash-exp-image-generation': 'gemini',
   'gemini-2.0-flash-preview-image-generation': 'gemini',
@@ -152,12 +171,18 @@ export const KNOWN_MODELS: Record<string, ApiProvider> = {
 
 // 默认模型配置（用户首次使用时自动选择）
 export const DEFAULT_MODELS: Record<ApiProvider, string> = {
+  doubao: 'doubao-seedream-4-5-251128',
   gemini: 'gemini-3.1-flash-image-preview',
   openai: 'gpt-image-1.5',
 };
 
 // 供应商显示信息
 export const PROVIDER_INFO: Record<ApiProvider, { name: string; icon: string; description: string }> = {
+  doubao: {
+    name: '豆包',
+    icon: '🎨',
+    description: '免费绘图，无需配置',
+  },
   gemini: {
     name: 'Gemini',
     icon: '✨',
@@ -173,6 +198,11 @@ export const PROVIDER_INFO: Record<ApiProvider, { name: string; icon: string; de
 // 根据模型名判断 API 类型
 export function getProviderFromModel(modelName: string): ApiProvider {
   const normalizedName = modelName.toLowerCase().replace(/^models\//, '');
+  
+  // 豆包绘图模型：包含 "doubao" 和 "seedream"
+  if (normalizedName.includes('doubao') && normalizedName.includes('seed')) {
+    return 'doubao';
+  }
   
   // Gemini 绘图模型：同时包含 "gemini" 和 "image"
   if (normalizedName.includes('gemini') && normalizedName.includes('image')) {

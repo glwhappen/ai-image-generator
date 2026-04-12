@@ -9,7 +9,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
-import { Loader2, RefreshCw, AlertCircle, Sparkles, Bot } from 'lucide-react';
+import { Loader2, RefreshCw, AlertCircle, Sparkles, Bot, Palette } from 'lucide-react';
 import type { ApiProvider, ProviderConfig } from '@/types';
 import { DEFAULT_MODELS } from '@/types';
 
@@ -27,6 +27,7 @@ interface ModelInfo {
 interface ApiConfigState {
   currentProvider: ApiProvider;
   providers: {
+    doubao: ProviderConfig;
     gemini: ProviderConfig;
     openai: ProviderConfig;
   };
@@ -34,6 +35,7 @@ interface ApiConfigState {
   aspectRatio: string;
   imageSize: string;
   openaiSize: string;
+  doubaoSize: string;
   useCustomSize: boolean;
 }
 
@@ -94,6 +96,18 @@ export function ModelSelector({
   const [hasLoadedFromCache, setHasLoadedFromCache] = useState(false);
 
   const fetchModels = useCallback(async (forceRefresh: boolean = false) => {
+    // 豆包使用内置模型列表，不需要从 API 获取
+    if (currentProvider === 'doubao') {
+      const doubaoModels = [
+        { name: 'doubao-seedream-4-5-251128', displayName: 'SeedReam 4.5', provider: 'doubao' as ApiProvider },
+      ];
+      setModels(doubaoModels);
+      if (!selectedModel) {
+        onModelChange('doubao-seedream-4-5-251128');
+      }
+      return;
+    }
+
     if (!currentProviderConfig.baseUrl || !currentProviderConfig.apiKey) {
       setModels([]);
       return;
@@ -182,7 +196,7 @@ export function ModelSelector({
     fetchModels(true);
   };
 
-  const isConfigured = currentProviderConfig.baseUrl && currentProviderConfig.apiKey;
+  const isConfigured = currentProvider === 'doubao' || (currentProviderConfig.baseUrl && currentProviderConfig.apiKey);
 
   // 获取当前选中模型的信息
   const selectedModelInfo = models.find((m) => m.name === selectedModel || m.name === `models/${selectedModel}`);
@@ -218,7 +232,9 @@ export function ModelSelector({
           <SelectValue placeholder="选择模型...">
             {selectedModel ? (
               <div className="flex items-center gap-2 truncate">
-                {currentProvider === 'gemini' ? (
+                {currentProvider === 'doubao' ? (
+                  <Palette className="h-3.5 w-3.5 text-orange-500 shrink-0" />
+                ) : currentProvider === 'gemini' ? (
                   <Sparkles className="h-3.5 w-3.5 text-primary shrink-0" />
                 ) : (
                   <Bot className="h-3.5 w-3.5 text-blue-500 shrink-0" />
@@ -242,7 +258,9 @@ export function ModelSelector({
           {models.map((model) => (
             <SelectItem key={model.name} value={model.name}>
               <div className="flex items-center gap-2">
-                {model.provider === 'gemini' ? (
+                {model.provider === 'doubao' ? (
+                  <Palette className="h-3 w-3 text-orange-500" />
+                ) : model.provider === 'gemini' ? (
                   <Sparkles className="h-3 w-3 text-primary" />
                 ) : (
                   <Bot className="h-3 w-3 text-blue-500" />

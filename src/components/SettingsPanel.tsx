@@ -21,6 +21,7 @@ import { PROVIDER_INFO } from '@/types';
 
 // 默认配置（内置）
 const DEFAULT_CONFIGS: Record<ApiProvider, { baseUrl: string }> = {
+  doubao: { baseUrl: 'https://integration.coze.cn' },
   gemini: { baseUrl: 'https://ai.nflow.red' },
   openai: { baseUrl: 'https://ai.nflow.red' },
 };
@@ -176,6 +177,10 @@ export function SettingsPanel({
   const [showModelDropdown, setShowModelDropdown] = useState(false);
   
   // 临时编辑状态（不显示实际的 apiKey）
+  const [doubaoConfig, setDoubaoConfig] = useState({ 
+    ...apiConfig.providers.doubao, 
+    apiKey: '' // 始终显示为空
+  });
   const [geminiConfig, setGeminiConfig] = useState({ 
     ...apiConfig.providers.gemini, 
     apiKey: '' // 始终显示为空
@@ -209,6 +214,7 @@ export function SettingsPanel({
   const handleOpenChange = (open: boolean) => {
     if (open) {
       // 打开时重置为空，不显示实际 key
+      setDoubaoConfig({ ...apiConfig.providers.doubao, apiKey: '' });
       setGeminiConfig({ ...apiConfig.providers.gemini, apiKey: '' });
       setOpenaiConfig({ ...apiConfig.providers.openai, apiKey: '' });
       setImportUserId('');
@@ -295,7 +301,7 @@ export function SettingsPanel({
   };
 
   const handleSaveProvider = (provider: ApiProvider) => {
-    const config = provider === 'gemini' ? geminiConfig : openaiConfig;
+    const config = provider === 'doubao' ? doubaoConfig : provider === 'gemini' ? geminiConfig : openaiConfig;
     // 如果用户输入了新的 apiKey，使用用户的；否则保留原有配置
     const finalConfig: Partial<ProviderConfig> = {
       enabled: config.enabled,
@@ -316,6 +322,9 @@ export function SettingsPanel({
     const info = PROVIDER_INFO[provider];
     const hasCustomKey = !!apiConfig.providers[provider].apiKey && 
                           apiConfig.providers[provider].apiKey.length > 0;
+    
+    // 豆包使用内置 token，不需要用户配置 API Key
+    const isBuiltIn = provider === 'doubao';
 
     return (
       <div className="space-y-4 pt-4">
@@ -327,60 +336,78 @@ export function SettingsPanel({
               <div className="text-xs text-muted-foreground">{info.description}</div>
             </div>
           </div>
-          <div className="flex items-center gap-2">
-            <Label htmlFor={`${provider}-enabled`} className="text-sm">
-              启用
-            </Label>
-            <Switch
-              id={`${provider}-enabled`}
-              checked={config.enabled}
-              onCheckedChange={(checked) => setConfig(prev => ({ ...prev, enabled: checked }))}
-            />
+          {isBuiltIn ? (
+            <span className="text-xs text-green-600 bg-green-500/10 px-2 py-1 rounded-full">免费使用</span>
+          ) : (
+            <div className="flex items-center gap-2">
+              <Label htmlFor={`${provider}-enabled`} className="text-sm">
+                启用
+              </Label>
+              <Switch
+                id={`${provider}-enabled`}
+                checked={config.enabled}
+                onCheckedChange={(checked) => setConfig(prev => ({ ...prev, enabled: checked }))}
+              />
+            </div>
+          )}
+        </div>
+
+        {isBuiltIn ? (
+          <div className="space-y-3 p-4 bg-muted/30 rounded-lg border">
+            <p className="text-sm text-muted-foreground">
+              豆包绘图服务由平台免费提供，无需配置 API Key，开箱即用。
+            </p>
+            <div className="text-xs text-muted-foreground space-y-1">
+              <p>支持模型：SeedReam 4.5</p>
+              <p>支持尺寸：2K (2048×2048) / 4K (4096×4096)</p>
+            </div>
           </div>
-        </div>
+        ) : (
+          <>
+            <div className="space-y-2">
+              <Label htmlFor={`${provider}-baseUrl`}>Base URL</Label>
+              <Input
+                id={`${provider}-baseUrl`}
+                placeholder={DEFAULT_CONFIGS[provider].baseUrl}
+                value={config.baseUrl}
+                onChange={(e) => setConfig(prev => ({ ...prev, baseUrl: e.target.value }))}
+                className="font-mono text-sm"
+                disabled={!config.enabled}
+              />
+              <p className="text-xs text-muted-foreground">
+                留空使用默认地址
+              </p>
+            </div>
 
-        <div className="space-y-2">
-          <Label htmlFor={`${provider}-baseUrl`}>Base URL</Label>
-          <Input
-            id={`${provider}-baseUrl`}
-            placeholder={DEFAULT_CONFIGS[provider].baseUrl}
-            value={config.baseUrl}
-            onChange={(e) => setConfig(prev => ({ ...prev, baseUrl: e.target.value }))}
-            className="font-mono text-sm"
-            disabled={!config.enabled}
-          />
-          <p className="text-xs text-muted-foreground">
-            留空使用默认地址
-          </p>
-        </div>
+            <div className="space-y-2">
+              <Label htmlFor={`${provider}-apiKey`}>API Key</Label>
+              <Input
+                id={`${provider}-apiKey`}
+                type="password"
+                placeholder={hasCustomKey ? "已配置自定义密钥（留空保持不变）" : "留空使用内置密钥"}
+                value={config.apiKey}
+                onChange={(e) => setConfig(prev => ({ ...prev, apiKey: e.target.value }))}
+                className="font-mono text-sm"
+                disabled={!config.enabled}
+              />
+              <p className="text-xs text-muted-foreground">
+                {hasCustomKey 
+                  ? "输入新密钥可覆盖当前配置" 
+                  : "可选，留空使用内置服务"}
+              </p>
+            </div>
 
-        <div className="space-y-2">
-          <Label htmlFor={`${provider}-apiKey`}>API Key</Label>
-          <Input
-            id={`${provider}-apiKey`}
-            type="password"
-            placeholder={hasCustomKey ? "已配置自定义密钥（留空保持不变）" : "留空使用内置密钥"}
-            value={config.apiKey}
-            onChange={(e) => setConfig(prev => ({ ...prev, apiKey: e.target.value }))}
-            className="font-mono text-sm"
-            disabled={!config.enabled}
-          />
-          <p className="text-xs text-muted-foreground">
-            {hasCustomKey 
-              ? "输入新密钥可覆盖当前配置" 
-              : "可选，留空使用内置服务"}
-          </p>
-        </div>
-
-        <div className="flex justify-end pt-2">
-          <Button 
-            onClick={() => handleSaveProvider(provider)} 
-            disabled={!config.enabled}
-            size="sm"
-          >
-            保存配置
-          </Button>
-        </div>
+            <div className="flex justify-end pt-2">
+              <Button 
+                onClick={() => handleSaveProvider(provider)} 
+                disabled={!config.enabled}
+                size="sm"
+              >
+                保存配置
+              </Button>
+            </div>
+          </>
+        )}
       </div>
     );
   };
@@ -405,11 +432,15 @@ export function SettingsPanel({
         </DialogHeader>
 
         <Tabs defaultValue="preferences" className="w-full">
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-5">
             <TabsTrigger value="preferences">偏好</TabsTrigger>
             <TabsTrigger value="prompts" className="flex items-center gap-1.5">
               <Wand2 className="h-3.5 w-3.5" />
               提示词
+            </TabsTrigger>
+            <TabsTrigger value="doubao" className="flex items-center gap-1.5">
+              <span>{PROVIDER_INFO.doubao.icon}</span>
+              <span>豆包</span>
             </TabsTrigger>
             <TabsTrigger value="gemini" className="flex items-center gap-1.5">
               <span>{PROVIDER_INFO.gemini.icon}</span>
@@ -751,6 +782,10 @@ export function SettingsPanel({
                 </Button>
               </div>
             </div>
+          </TabsContent>
+          
+          <TabsContent value="doubao">
+            {renderProviderTab('doubao', doubaoConfig, setDoubaoConfig)}
           </TabsContent>
           
           <TabsContent value="gemini">

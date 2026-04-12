@@ -12,7 +12,7 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
-import { IMAGE_SIZES, ASPECT_RATIOS, OPENAI_SIZES, ApiProvider } from '@/types';
+import { IMAGE_SIZES, ASPECT_RATIOS, OPENAI_SIZES, DOUBAO_SIZES, ApiProvider } from '@/types';
 import { Settings2, Square, Monitor, Pencil } from 'lucide-react';
 
 interface SizeSelectorProps {
@@ -22,12 +22,15 @@ interface SizeSelectorProps {
   imageSize: string;
   // OpenAI 参数
   openaiSize: string;
+  // 豆包参数
+  doubaoSize: string;
   useCustomSize: boolean;
   apiKey: string;
   onSizeChange: (params: {
     aspectRatio?: string;
     imageSize?: string;
     openaiSize?: string;
+    doubaoSize?: string;
     useCustomSize?: boolean;
   }) => void;
 }
@@ -42,6 +45,7 @@ export function SizeSelector({
   aspectRatio, 
   imageSize, 
   openaiSize,
+  doubaoSize,
   useCustomSize, 
   apiKey, 
   onSizeChange 
@@ -93,6 +97,10 @@ export function SizeSelector({
     onSizeChange({ openaiSize: value });
   };
 
+  const handleDoubaoSizeChange = (value: string) => {
+    onSizeChange({ doubaoSize: value });
+  };
+
   const currentAspect = ASPECT_RATIOS.find(a => a.value === aspectRatio);
   
   // 所有尺寸选项都可用
@@ -127,7 +135,31 @@ export function SizeSelector({
       {/* 尺寸设置面板 */}
       {useCustomSize && (
         <div className="space-y-4 p-3 bg-muted/30 rounded-lg border">
-          {provider === 'gemini' ? (
+          {provider === 'doubao' ? (
+            <>
+              {/* 豆包: 尺寸选择 */}
+              <div className="space-y-2">
+                <Label className="text-xs text-muted-foreground flex items-center gap-1">
+                  <Monitor className="h-3 w-3" />
+                  图片尺寸
+                </Label>
+                <div className="flex gap-2">
+                  {DOUBAO_SIZES.map((size) => (
+                    <Button
+                      key={size.id}
+                      type="button"
+                      variant={doubaoSize === size.value ? 'default' : 'outline'}
+                      size="sm"
+                      onClick={() => handleDoubaoSizeChange(size.value)}
+                      className="flex-1 h-8"
+                    >
+                      <span className="font-medium text-sm">{size.label}</span>
+                    </Button>
+                  ))}
+                </div>
+              </div>
+            </>
+          ) : provider === 'gemini' ? (
             <>
               {/* Gemini: 宽高比选择 */}
               <div className="space-y-2">
@@ -248,11 +280,13 @@ export function SizeSelector({
           <div className="flex items-center justify-between px-2 py-1.5 bg-background rounded text-xs">
             <span className="text-muted-foreground">输出:</span>
             <span className="font-mono font-medium">
-              {provider === 'gemini' 
-                ? (aspectRatio === 'auto' 
-                    ? `${imageSize}（自动比例）` 
-                    : `${aspectRatio} · ${imageSize}`)
-                : openaiSize
+              {provider === 'doubao' 
+                ? (doubaoSize === '2k' ? '2048×2048' : '4096×4096')
+                : provider === 'gemini' 
+                  ? (aspectRatio === 'auto' 
+                      ? `${imageSize}（自动比例）` 
+                      : `${aspectRatio} · ${imageSize}`)
+                  : openaiSize
               }
             </span>
           </div>

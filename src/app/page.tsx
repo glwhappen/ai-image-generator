@@ -306,7 +306,7 @@ function HomeContent() {
     }
     
     // 自动选择供应商
-    if (providerParam && (providerParam === 'gemini' || providerParam === 'openai')) {
+    if (providerParam && (providerParam === 'doubao' || providerParam === 'gemini' || providerParam === 'openai')) {
       switchProvider(providerParam);
     }
     
@@ -358,6 +358,7 @@ function HomeContent() {
     aspectRatio?: string;
     imageSize?: string;
     openaiSize?: string;
+    doubaoSize?: string;
     useCustomSize?: boolean;
   }) => {
     updateApiConfig(params);
@@ -501,23 +502,28 @@ function HomeContent() {
         
         // 2. 提交生成任务（后台执行）
         const currentConfig = getCurrentProviderConfig();
+        const submitRequestBody: Record<string, unknown> = {
+          prompt: enhancedPrompt,
+          model: apiConfig.selectedModel,
+          provider: currentProvider,
+          userId: userId,
+          isPublic: autoPublic,
+          aspectRatio: apiConfig.aspectRatio,
+          imageSize: apiConfig.imageSize,
+          size: apiConfig.openaiSize,
+          doubaoSize: apiConfig.doubaoSize,
+          referenceImage: referenceImage?.base64,
+          referenceImageMime: referenceImage?.mimeType,
+        };
+        // 豆包使用服务端内置 token
+        if (currentProvider !== 'doubao') {
+          submitRequestBody.baseUrl = currentConfig.baseUrl;
+          submitRequestBody.apiKey = currentConfig.apiKey;
+        }
         const submitResponse = await fetch('/api/images/generate', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            prompt: enhancedPrompt,
-            model: apiConfig.selectedModel,
-            provider: currentProvider,
-            baseUrl: currentConfig.baseUrl,
-            apiKey: currentConfig.apiKey,
-            userId: userId,
-            isPublic: autoPublic,
-            aspectRatio: apiConfig.aspectRatio,
-            imageSize: apiConfig.imageSize,
-            size: apiConfig.openaiSize,
-            referenceImage: referenceImage?.base64,
-            referenceImageMime: referenceImage?.mimeType,
-          }),
+          body: JSON.stringify(submitRequestBody),
         });
         
         const submitData = await submitResponse.json();
@@ -616,7 +622,7 @@ function HomeContent() {
     setActiveTab('create');
     
     // 自动选择供应商
-    if (image.provider === 'gemini' || image.provider === 'openai') {
+    if (image.provider === 'doubao' || image.provider === 'gemini' || image.provider === 'openai') {
       switchProvider(image.provider);
     }
     
@@ -772,6 +778,7 @@ function HomeContent() {
                           aspectRatio={apiConfig.aspectRatio}
                           imageSize={apiConfig.imageSize}
                           openaiSize={apiConfig.openaiSize}
+                          doubaoSize={apiConfig.doubaoSize}
                           useCustomSize={apiConfig.useCustomSize}
                           apiKey={currentProviderConfig.apiKey}
                           onSizeChange={handleSizeChange}

@@ -30,6 +30,7 @@ import {
   RefreshCw,
   Wand2,
   AlertCircle,
+  Palette,
 } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import type { ImageRecord, ImageStatus } from '@/hooks/useAppState';
@@ -164,6 +165,9 @@ export function ImageGallery({ images, onDeleteImage, onTogglePublic, onEdit, sh
     // 回退到配置中的尺寸信息
     const config = image.config as Record<string, unknown> | null;
     
+    if (image.provider === 'doubao' && config?.doubaoSize) {
+      return config.doubaoSize as string;
+    }
     if (image.provider === 'gemini' && config?.aspectRatio && config?.imageSize) {
       return `${config.aspectRatio} · ${config.imageSize}`;
     }
@@ -326,7 +330,11 @@ export function ImageGallery({ images, onDeleteImage, onTogglePublic, onEdit, sh
               {/* 提供商标识 */}
               {image.status === 'completed' && image.image_url && !hasError && (
                 <div className="absolute top-2 left-2 z-20">
-                  {image.provider === 'gemini' ? (
+                  {image.provider === 'doubao' ? (
+                    <div className="bg-orange-500/80 rounded-full p-1">
+                      <Palette className="h-3 w-3 text-white" />
+                    </div>
+                  ) : image.provider === 'gemini' ? (
                     <div className="bg-primary/80 rounded-full p-1">
                       <Sparkles className="h-3 w-3 text-white" />
                     </div>

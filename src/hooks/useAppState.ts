@@ -31,6 +31,7 @@ export interface ImageRecord {
 export interface ApiConfigState {
   currentProvider: ApiProvider;
   providers: {
+    doubao: ProviderConfig;
     gemini: ProviderConfig;
     openai: ProviderConfig;
   };
@@ -38,12 +39,19 @@ export interface ApiConfigState {
   aspectRatio: string;
   imageSize: string;
   openaiSize: string;
+  doubaoSize: string;
   useCustomSize: boolean;
 }
 
 const STORAGE_KEY = 'ai-image-generator-state';
 
 // 默认供应商配置
+const DEFAULT_DOUBAO_CONFIG: ProviderConfig = {
+  baseUrl: 'https://integration.coze.cn',
+  apiKey: '', // 豆包使用服务端硬编码 token，不需要用户填写
+  enabled: true,
+};
+
 const DEFAULT_GEMINI_CONFIG: ProviderConfig = {
   baseUrl: 'https://ai.nflow.red',
   apiKey: 'sk-OQElE8IYLAryIy92mdyfnzvjCcgtRrMJk5hIGLgH0QbkEfYC',
@@ -57,8 +65,9 @@ const DEFAULT_OPENAI_CONFIG: ProviderConfig = {
 };
 
 const defaultApiConfig: ApiConfigState = {
-  currentProvider: 'gemini',  // 默认使用 Gemini 供应商
+  currentProvider: 'doubao',  // 默认使用豆包（免费，无需配置）
   providers: {
+    doubao: DEFAULT_DOUBAO_CONFIG,
     gemini: DEFAULT_GEMINI_CONFIG,
     openai: DEFAULT_OPENAI_CONFIG,
   },
@@ -66,6 +75,7 @@ const defaultApiConfig: ApiConfigState = {
   aspectRatio: 'auto',  // 默认不限制宽高比，让模型自动决定
   imageSize: '2K',  // 默认 2K 分辨率
   openaiSize: 'auto',
+  doubaoSize: '2k',
   useCustomSize: false,
 };
 
@@ -89,8 +99,9 @@ export function useAppState() {
         const storedProviders = parsed.apiConfig?.providers || {};
         
         setApiConfig({
-          currentProvider: parsed.apiConfig?.currentProvider || 'gemini',  // 默认 Gemini
+          currentProvider: parsed.apiConfig?.currentProvider || 'doubao',
           providers: {
+            doubao: { ...DEFAULT_DOUBAO_CONFIG, ...storedProviders.doubao },
             gemini: { ...DEFAULT_GEMINI_CONFIG, ...storedProviders.gemini },
             openai: { ...DEFAULT_OPENAI_CONFIG, ...storedProviders.openai },
           },
@@ -98,6 +109,7 @@ export function useAppState() {
           aspectRatio: parsed.apiConfig?.aspectRatio || '1:1',
           imageSize: parsed.apiConfig?.imageSize || '1K',
           openaiSize: parsed.apiConfig?.openaiSize || 'auto',
+          doubaoSize: parsed.apiConfig?.doubaoSize || '2k',
           useCustomSize: parsed.apiConfig?.useCustomSize || false,
         });
         
@@ -230,23 +242,30 @@ export function useAppState() {
     const currentConfig = getCurrentProviderConfig();
     
     try {
+      const requestBody: Record<string, unknown> = {
+        userId,
+        prompt,
+        model: apiConfig.selectedModel,
+        provider: apiConfig.currentProvider,
+        aspectRatio: apiConfig.useCustomSize ? apiConfig.aspectRatio : undefined,
+        imageSize: apiConfig.useCustomSize ? apiConfig.imageSize : undefined,
+        size: apiConfig.useCustomSize && apiConfig.openaiSize !== 'auto' ? apiConfig.openaiSize : undefined,
+        doubaoSize: apiConfig.useCustomSize ? apiConfig.doubaoSize : undefined,
+        referenceImage: referenceImage?.base64,
+        referenceImageMime: referenceImage?.mimeType,
+        isPublic: autoPublic,
+      };
+      
+      // 豆包使用服务端内置 token，不需要用户传 key
+      if (apiConfig.currentProvider !== 'doubao') {
+        requestBody.baseUrl = currentConfig.baseUrl;
+        requestBody.apiKey = currentConfig.apiKey;
+      }
+      
       const response = await fetch('/api/images/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          userId,
-          prompt,
-          model: apiConfig.selectedModel,
-          provider: apiConfig.currentProvider,
-          baseUrl: currentConfig.baseUrl,
-          apiKey: currentConfig.apiKey,
-          aspectRatio: apiConfig.useCustomSize ? apiConfig.aspectRatio : undefined,
-          imageSize: apiConfig.useCustomSize ? apiConfig.imageSize : undefined,
-          size: apiConfig.useCustomSize && apiConfig.openaiSize !== 'auto' ? apiConfig.openaiSize : undefined,
-          referenceImage: referenceImage?.base64,
-          referenceImageMime: referenceImage?.mimeType,
-          isPublic: autoPublic, // 传递自动公开设置
-        }),
+        body: JSON.stringify(requestBody),
       });
       
       const data = await response.json();
