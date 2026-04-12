@@ -29,7 +29,9 @@ import {
   Pencil,
   RefreshCw,
   Wand2,
+  AlertCircle,
 } from 'lucide-react';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import type { ImageRecord, ImageStatus } from '@/hooks/useAppState';
 
 interface ImageGalleryProps {
@@ -257,14 +259,33 @@ export function ImageGallery({ images, onDeleteImage, onTogglePublic, onEdit, sh
                 )
               ) : (
                 <div className="flex flex-col items-center justify-center gap-2 bg-muted/50 p-4 min-h-[120px]">
-                  <StatusIcon status={image.status} />
-                  <span className="text-xs text-muted-foreground">
-                    {StatusText({ status: image.status })}
-                  </span>
-                  {image.status === 'failed' && image.error_message && (
-                    <span className="text-xs text-red-500 text-center line-clamp-2 max-w-full" title={image.error_message}>
-                      {image.error_message.length > 50 ? image.error_message.slice(0, 50) + '...' : image.error_message}
+                  <div className="flex items-center gap-1.5">
+                    <StatusIcon status={image.status} />
+                    <span className="text-xs text-muted-foreground">
+                      {StatusText({ status: image.status })}
                     </span>
+                    {image.is_public && (
+                      <Globe className="h-3 w-3 text-green-500" />
+                    )}
+                  </div>
+                  {image.status === 'failed' && image.error_message && (
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <span className="text-xs text-red-500 text-center line-clamp-3 max-w-full cursor-help">
+                          {image.error_message.length > 120 ? image.error_message.slice(0, 120) + '...' : image.error_message}
+                        </span>
+                      </TooltipTrigger>
+                      <TooltipContent
+                        side="bottom"
+                        className="max-w-xs whitespace-pre-wrap text-left"
+                        sideOffset={4}
+                      >
+                        <div className="flex items-start gap-2">
+                          <AlertCircle className="h-3.5 w-3.5 shrink-0 mt-0.5 text-red-400" />
+                          <span>{image.error_message}</span>
+                        </div>
+                      </TooltipContent>
+                    </Tooltip>
                   )}
                 </div>
               )}
@@ -317,8 +338,8 @@ export function ImageGallery({ images, onDeleteImage, onTogglePublic, onEdit, sh
                 </div>
               )}
             
-            {/* 公开状态标识 */}
-            {image.is_public && !hasError && (
+            {/* 公开状态标识 - 仅完成状态显示独立图标 */}
+            {image.is_public && image.status === 'completed' && image.image_url && !hasError && (
               <div className="absolute top-2 right-10 z-20 bg-green-500/80 rounded-full p-1" title="已公开">
                 <Globe className="h-3 w-3 text-white" />
               </div>
