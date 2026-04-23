@@ -229,7 +229,7 @@ export function ModelSelector({
         disabled={isLoading || models.length === 0}
       >
         <SelectTrigger className="w-full min-w-[200px]">
-          <SelectValue placeholder="选择模型...">
+          <SelectValue>
             {selectedModel ? (
               <div className="flex items-center gap-2 truncate">
                 {currentProvider === 'doubao' ? (
