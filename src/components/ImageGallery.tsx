@@ -100,7 +100,31 @@ export function ImageGallery({ images, onDeleteImage, onTogglePublic, onEdit, sh
   const [selectedImage, setSelectedImage] = useState<ImageRecord | null>(null);
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [failedImages, setFailedImages] = useState<Set<string>>(new Set());
-  const [loadedOriginals, setLoadedOriginals] = useState<Set<string>>(new Set()); // 已加载原图的图片 ID
+  // 已加载原图的图片 ID（持久化到 localStorage）
+  const [loadedOriginals, setLoadedOriginals] = useState<Set<string>>(() => {
+    if (typeof window === 'undefined') return new Set();
+    try {
+      const stored = localStorage.getItem('ai-image-loaded-originals');
+      return stored ? new Set(JSON.parse(stored)) : new Set();
+    } catch {
+      return new Set();
+    }
+  });
+
+  // 记录原图已加载，并持久化到 localStorage
+  const handleOriginalLoaded = (imageId: string) => {
+    setLoadedOriginals((prev) => {
+      if (prev.has(imageId)) return prev;
+      const next = new Set(prev);
+      next.add(imageId);
+      try {
+        localStorage.setItem('ai-image-loaded-originals', JSON.stringify([...next]));
+      } catch {
+        // localStorage 满了或不可用，忽略
+      }
+      return next;
+    });
+  };
 
   const handleDownload = async (image: ImageRecord) => {
     if (!image.image_url) return;
@@ -467,9 +491,8 @@ export function ImageGallery({ images, onDeleteImage, onTogglePublic, onEdit, sh
         onClose={() => setIsPreviewOpen(false)}
         thumbnailSrc={selectedImage?.thumbnail_url || undefined}
         onOriginalLoaded={() => {
-          // 原图加载完成后，记录该图片 ID
           if (selectedImage?.id) {
-            setLoadedOriginals(prev => new Set(prev).add(selectedImage.id));
+            handleOriginalLoaded(selectedImage.id);
           }
         }}
       />
