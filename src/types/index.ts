@@ -173,7 +173,7 @@ export const KNOWN_MODELS: Record<string, ApiProvider> = {
 export const DEFAULT_MODELS: Record<ApiProvider, string> = {
   doubao: 'doubao-seedream-4-5-251128',
   gemini: 'gemini-3.1-flash-image-preview',
-  openai: 'gpt-image-1.5',
+  openai: 'gpt-image-2',
 };
 
 // 供应商显示信息
