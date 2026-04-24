@@ -84,27 +84,37 @@ export async function POST(request: NextRequest) {
       return await handleGeminiRequest(body);
     }
   } catch (error) {
-    console.error('Generate API error:', error);
-    let errorMessage = error instanceof Error ? error.message : '服务器内部错误';
+    // 获取原始错误信息
+    const rawErrorMessage = error instanceof Error ? error.message : String(error);
+    const errorStack = error instanceof Error ? error.stack : undefined;
+    
+    // 记录原始错误信息到日志（方便管理员调试）
+    console.error('Generate API error:', {
+      error: rawErrorMessage,
+      stack: errorStack,
+      timestamp: new Date().toISOString(),
+    });
+    
+    // 处理用户显示的错误信息
+    let errorMessage = rawErrorMessage;
+    const lowerError = errorMessage.toLowerCase();
     
     // 检查是否为配额错误
-    if (errorMessage.toLowerCase().includes('quota') || 
-        errorMessage.toLowerCase().includes('rate limit') ||
+    if (lowerError.includes('quota') || 
+        lowerError.includes('rate limit') ||
         errorMessage.includes('欠费')) {
       errorMessage = '目前平台欠费，可以自行替换key使用';
     }
-    
     // 检查是否为图片违规错误
-    if (errorMessage.includes('IMAGE_OTHER') || errorMessage.includes('PROHIBITED_CONTENT')) {
+    else if (errorMessage.includes('IMAGE_OTHER') || errorMessage.includes('PROHIBITED_CONTENT')) {
       errorMessage = '生成图片违规';
     }
-    
     // 检查是否为网络错误
-    if (errorMessage.toLowerCase().includes('fetch failed') ||
-        errorMessage.toLowerCase().includes('network') ||
-        errorMessage.toLowerCase().includes('econnrefused') ||
-        errorMessage.toLowerCase().includes('enotfound') ||
-        errorMessage.toLowerCase().includes('etimedout')) {
+    else if (lowerError.includes('fetch failed') ||
+             lowerError.includes('network') ||
+             lowerError.includes('econnrefused') ||
+             lowerError.includes('enotfound') ||
+             lowerError.includes('etimedout')) {
       errorMessage = '网络连接失败，请检查网络或API地址是否正确';
     }
     
