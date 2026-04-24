@@ -30,6 +30,7 @@ export function ImageViewer({ src, alt, isOpen, onClose, onImageClick, thumbnail
   // 使用 ref 防止重复加载
   const loadingRef = useRef(false);
   const containerRef = useRef<HTMLDivElement>(null);
+  const imageContainerRef = useRef<HTMLDivElement>(null);
 
   // 重置状态
   const resetState = useCallback(() => {
@@ -258,6 +259,7 @@ export function ImageViewer({ src, alt, isOpen, onClose, onImageClick, thumbnail
 
       {/* 图片容器 */}
       <div
+        ref={imageContainerRef}
         className="w-full h-full flex items-center justify-center overflow-hidden relative"
         onWheel={handleWheel}
         onMouseDown={handleMouseDown}
@@ -268,6 +270,12 @@ export function ImageViewer({ src, alt, isOpen, onClose, onImageClick, thumbnail
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
         onDoubleClick={handleDoubleClick}
+        onClick={(e) => {
+          // 点击图片容器空白区域关闭（不是图片本身）
+          if (e.target === e.currentTarget) {
+            onClose();
+          }
+        }}
       >
         {/* 图片包装器 */}
         <div
