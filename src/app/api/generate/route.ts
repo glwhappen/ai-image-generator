@@ -85,8 +85,17 @@ export async function POST(request: NextRequest) {
     }
   } catch (error) {
     console.error('Generate API error:', error);
+    let errorMessage = error instanceof Error ? error.message : '服务器内部错误';
+    
+    // 检查是否为配额错误
+    if (errorMessage.toLowerCase().includes('quota') || 
+        errorMessage.toLowerCase().includes('rate limit') ||
+        errorMessage.includes('欠费')) {
+      errorMessage = '目前平台欠费，可以自行替换key使用';
+    }
+    
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : '服务器内部错误' },
+      { error: errorMessage },
       { status: 500 }
     );
   }

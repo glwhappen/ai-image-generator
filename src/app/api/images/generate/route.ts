@@ -196,12 +196,22 @@ async function generateImageAsync(
   } catch (error) {
     console.error('Generation failed:', error);
     
+    // 处理错误信息
+    let errorMessage = error instanceof Error ? error.message : '生成失败';
+    
+    // 检查是否为配额错误
+    if (errorMessage.toLowerCase().includes('quota') || 
+        errorMessage.toLowerCase().includes('rate limit') ||
+        errorMessage.includes('欠费')) {
+      errorMessage = '目前平台欠费，可以自行替换key使用';
+    }
+    
     // 更新状态为 failed
     await client
       .from('images')
       .update({
         status: 'failed',
-        error_message: error instanceof Error ? error.message : '生成失败',
+        error_message: errorMessage,
         updated_at: new Date().toISOString(),
       })
       .eq('id', imageId);
