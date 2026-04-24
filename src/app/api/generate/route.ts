@@ -95,7 +95,7 @@ export async function POST(request: NextRequest) {
     }
     
     // 检查是否为图片违规错误
-    if (errorMessage.includes('IMAGE_OTHER')) {
+    if (errorMessage.includes('IMAGE_OTHER') || errorMessage.includes('PROHIBITED_CONTENT')) {
       errorMessage = '生成图片违规';
     }
     
