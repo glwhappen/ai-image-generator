@@ -206,17 +206,18 @@ export function ModelSelector({
       }
       console.error('Failed to fetch models:', err);
       setError(err instanceof Error ? err.message : '获取模型列表失败');
+      setIsLoading(false);
     } finally {
-      // 只有当前请求没有被取消时才更新加载状态
-      if (!abortController.signal.aborted && currentProviderRef.current === currentProvider) {
-        setIsLoading(false);
-      }
+      setIsLoading(false);
     }
   }, [currentProviderConfig.baseUrl, currentProviderConfig.apiKey, currentProvider, selectedModel, onModelChange]);
 
   // 当供应商配置变化时获取模型列表（从缓存或请求）
   useEffect(() => {
     setHasLoadedFromCache(false);
+    // 切换供应商时重置 loading 状态
+    setIsLoading(false);
+    setError(null);
     fetchModels(false);
   }, [currentProviderConfig.baseUrl, currentProviderConfig.apiKey, currentProvider]);
 
