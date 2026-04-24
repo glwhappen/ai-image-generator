@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import {
   Select,
   SelectContent,
@@ -94,8 +94,24 @@ export function ModelSelector({
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [hasLoadedFromCache, setHasLoadedFromCache] = useState(false);
+  
+  // 用于取消过期请求
+  const abortControllerRef = useRef<AbortController | null>(null);
+  const currentProviderRef = useRef<ApiProvider>(currentProvider);
 
   const fetchModels = useCallback(async (forceRefresh: boolean = false) => {
+    // 取消之前的请求
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+    
+    // 更新当前供应商引用
+    currentProviderRef.current = currentProvider;
+    
+    // 创建新的 AbortController
+    const abortController = new AbortController();
+    abortControllerRef.current = abortController;
+    
     // 豆包使用内置模型列表，不需要从 API 获取
     if (currentProvider === 'doubao') {
       const doubaoModels = [
@@ -144,9 +160,15 @@ export function ModelSelector({
           apiKey: currentProviderConfig.apiKey,
           provider: currentProvider,
         }),
+        signal: abortController.signal,
       });
 
       const data: ModelsResponse = await response.json();
+      
+      // 检查请求是否已被取消，以及供应商是否还是当前的
+      if (abortController.signal.aborted || currentProviderRef.current !== currentProvider) {
+        return;
+      }
 
       if (!response.ok || !data.success) {
         throw new Error(data.error || `获取模型列表失败: ${response.status}`);
@@ -178,10 +200,17 @@ export function ModelSelector({
         onModelChange(hasDefaultModel ? defaultModel : allModels[0].name);
       }
     } catch (err) {
+      // 忽略取消错误
+      if (err instanceof Error && err.name === 'AbortError') {
+        return;
+      }
       console.error('Failed to fetch models:', err);
       setError(err instanceof Error ? err.message : '获取模型列表失败');
     } finally {
-      setIsLoading(false);
+      // 只有当前请求没有被取消时才更新加载状态
+      if (!abortController.signal.aborted && currentProviderRef.current === currentProvider) {
+        setIsLoading(false);
+      }
     }
   }, [currentProviderConfig.baseUrl, currentProviderConfig.apiKey, currentProvider, selectedModel, onModelChange]);
 
@@ -190,6 +219,15 @@ export function ModelSelector({
     setHasLoadedFromCache(false);
     fetchModels(false);
   }, [currentProviderConfig.baseUrl, currentProviderConfig.apiKey, currentProvider]);
+
+  // 组件卸载时取消未完成的请求
+  useEffect(() => {
+    return () => {
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+    };
+  }, []);
 
   // 手动刷新
   const handleRefresh = () => {
