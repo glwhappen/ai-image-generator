@@ -206,6 +206,11 @@ async function generateImageAsync(
       errorMessage = '目前平台欠费，可以自行替换key使用';
     }
     
+    // 检查是否为图片违规错误
+    if (errorMessage.includes('IMAGE_OTHER')) {
+      errorMessage = '生成图片违规';
+    }
+    
     // 更新状态为 failed
     await client
       .from('images')

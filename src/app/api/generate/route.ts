@@ -94,6 +94,11 @@ export async function POST(request: NextRequest) {
       errorMessage = '目前平台欠费，可以自行替换key使用';
     }
     
+    // 检查是否为图片违规错误
+    if (errorMessage.includes('IMAGE_OTHER')) {
+      errorMessage = '生成图片违规';
+    }
+    
     return NextResponse.json(
       { error: errorMessage },
       { status: 500 }
