@@ -31,6 +31,10 @@ export function ImageViewer({ src, alt, isOpen, onClose, onImageClick, thumbnail
   const loadingRef = useRef(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const imageContainerRef = useRef<HTMLDivElement>(null);
+  
+  // 追踪鼠标按下位置，用于区分点击和拖拽
+  const mouseDownPosRef = useRef<{ x: number; y: number } | null>(null);
+  const hasDraggedRef = useRef(false);
 
   // 重置状态
   const resetState = useCallback(() => {
@@ -100,6 +104,11 @@ export function ImageViewer({ src, alt, isOpen, onClose, onImageClick, thumbnail
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
     if (e.button !== 0) return;
     e.preventDefault();
+    
+    // 记录鼠标按下位置
+    mouseDownPosRef.current = { x: e.clientX, y: e.clientY };
+    hasDraggedRef.current = false;
+    
     setIsDragging(true);
     setDragStart({
       x: e.clientX - position.x,
@@ -112,6 +121,16 @@ export function ImageViewer({ src, alt, isOpen, onClose, onImageClick, thumbnail
   const handleMouseMove = useCallback((e: React.MouseEvent) => {
     if (!isDragging) return;
     e.preventDefault();
+    
+    // 检测是否发生了实际拖拽（移动距离 > 5px）
+    if (mouseDownPosRef.current && !hasDraggedRef.current) {
+      const dx = e.clientX - mouseDownPosRef.current.x;
+      const dy = e.clientY - mouseDownPosRef.current.y;
+      if (Math.sqrt(dx * dx + dy * dy) > 5) {
+        hasDraggedRef.current = true;
+      }
+    }
+    
     setPosition({
       x: e.clientX - dragStart.x,
       y: e.clientY - dragStart.y,
@@ -271,6 +290,8 @@ export function ImageViewer({ src, alt, isOpen, onClose, onImageClick, thumbnail
         onTouchEnd={handleTouchEnd}
         onDoubleClick={handleDoubleClick}
         onClick={(e) => {
+          // 如果发生了拖拽，不处理点击
+          if (hasDraggedRef.current) return;
           // 点击图片容器空白区域关闭（不是图片本身）
           if (e.target === e.currentTarget) {
             onClose();
@@ -289,6 +310,8 @@ export function ImageViewer({ src, alt, isOpen, onClose, onImageClick, thumbnail
           }}
           onClick={(e) => {
             e.stopPropagation();
+            // 如果发生了拖拽，不处理点击
+            if (hasDraggedRef.current) return;
             if (scale === 1 && !isDragging && !isPinching && onImageClick) {
               handleImageClick();
             }
