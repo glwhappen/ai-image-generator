@@ -11,9 +11,10 @@ interface ImageViewerProps {
   onClose: () => void;
   onImageClick?: () => void;
   thumbnailSrc?: string;
+  onOriginalLoaded?: () => void; // 原图加载完成回调
 }
 
-export function ImageViewer({ src, alt, isOpen, onClose, onImageClick, thumbnailSrc }: ImageViewerProps) {
+export function ImageViewer({ src, alt, isOpen, onClose, onImageClick, thumbnailSrc, onOriginalLoaded }: ImageViewerProps) {
   const [scale, setScale] = useState(1);
   const [position, setPosition] = useState({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
@@ -190,8 +191,9 @@ export function ImageViewer({ src, alt, isOpen, onClose, onImageClick, thumbnail
       loadingRef.current = true;
       setImageSize({ width: img.naturalWidth, height: img.naturalHeight });
       setShowOriginal(true);
+      onOriginalLoaded?.(); // 通知父组件原图已加载
     }
-  }, []);
+  }, [onOriginalLoaded]);
 
   if (!isOpen) return null;
 

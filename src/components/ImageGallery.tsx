@@ -100,6 +100,7 @@ export function ImageGallery({ images, onDeleteImage, onTogglePublic, onEdit, sh
   const [selectedImage, setSelectedImage] = useState<ImageRecord | null>(null);
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [failedImages, setFailedImages] = useState<Set<string>>(new Set());
+  const [loadedOriginals, setLoadedOriginals] = useState<Set<string>>(new Set()); // 已加载原图的图片 ID
 
   const handleDownload = async (image: ImageRecord) => {
     if (!image.image_url) return;
@@ -236,7 +237,7 @@ export function ImageGallery({ images, onDeleteImage, onTogglePublic, onEdit, sh
                     </div>
                     {/* 实际图片 */}
                     <img
-                      src={image.thumbnail_url || image.image_url}
+                      src={loadedOriginals.has(image.id) ? image.image_url : (image.thumbnail_url || image.image_url)}
                       alt={image.prompt}
                       className="relative z-10 w-full h-auto opacity-0 transition-opacity duration-500 cursor-pointer group-hover:scale-[1.02]"
                       onLoad={(e) => {
@@ -465,6 +466,12 @@ export function ImageGallery({ images, onDeleteImage, onTogglePublic, onEdit, sh
         isOpen={isPreviewOpen}
         onClose={() => setIsPreviewOpen(false)}
         thumbnailSrc={selectedImage?.thumbnail_url || undefined}
+        onOriginalLoaded={() => {
+          // 原图加载完成后，记录该图片 ID
+          if (selectedImage?.id) {
+            setLoadedOriginals(prev => new Set(prev).add(selectedImage.id));
+          }
+        }}
       />
 
       {/* 底部操作栏 - 使用统一组件 */}
