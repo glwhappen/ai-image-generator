@@ -101,6 +101,8 @@ export function ImageGallery({ images, onDeleteImage, onTogglePublic, onEdit, on
   const [selectedImage, setSelectedImage] = useState<ImageRecord | null>(null);
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [failedImages, setFailedImages] = useState<Set<string>>(new Set());
+  // 正在重试的图片 ID
+  const [retryingImages, setRetryingImages] = useState<Set<string>>(new Set());
   // 已加载原图的图片 ID（持久化到 localStorage）
   const [loadedOriginals, setLoadedOriginals] = useState<Set<string>>(() => {
     if (typeof window === 'undefined') return new Set();
@@ -439,13 +441,23 @@ export function ImageGallery({ images, onDeleteImage, onTogglePublic, onEdit, on
                     variant="secondary"
                     size="icon"
                     className="h-7 w-7"
-                    onClick={(e) => {
+                    disabled={retryingImages.has(image.id)}
+                    onClick={async (e) => {
                       e.stopPropagation();
-                      onRetry(image);
+                      setRetryingImages(prev => new Set(prev).add(image.id));
+                      try {
+                        await onRetry(image);
+                      } finally {
+                        setRetryingImages(prev => {
+                          const next = new Set(prev);
+                          next.delete(image.id);
+                          return next;
+                        });
+                      }
                     }}
                     title="重试"
                   >
-                    <RefreshCw className="h-3.5 w-3.5" />
+                    <RefreshCw className={`h-3.5 w-3.5 ${retryingImages.has(image.id) ? 'animate-spin' : ''}`} />
                   </Button>
                 )}
                 {onEdit && (
