@@ -172,9 +172,7 @@ export function SizeSelector({
                   onValueChange={handleAspectRatioChange}
                 >
                   <SelectTrigger className="w-full h-8">
-                    <SelectValue>
-                      {isCustomAspect ? `自定义 (${aspectRatio})` : (currentAspect?.label || '选择宽高比')}
-                    </SelectValue>
+                    <SelectValue placeholder="选择宽高比" />
                   </SelectTrigger>
                   <SelectContent>
                     {ASPECT_RATIOS.map((ratio) => (

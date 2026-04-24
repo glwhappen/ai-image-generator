@@ -230,24 +230,7 @@ export function ModelSelector({
         disabled={isLoading || models.length === 0}
       >
         <SelectTrigger className="w-full min-w-[200px]">
-          <SelectValue>
-            {selectedModel ? (
-              <div className="flex items-center gap-2 truncate">
-                {currentProvider === 'doubao' ? (
-                  <Palette className="h-3.5 w-3.5 text-orange-500 shrink-0" />
-                ) : currentProvider === 'gemini' ? (
-                  <Sparkles className="h-3.5 w-3.5 text-primary shrink-0" />
-                ) : (
-                  <Bot className="h-3.5 w-3.5 text-blue-500 shrink-0" />
-                )}
-                <span className="truncate">
-                  {selectedModelInfo?.displayName || selectedModel.split('/').pop()}
-                </span>
-              </div>
-            ) : (
-              '选择模型...'
-            )}
-          </SelectValue>
+          <SelectValue placeholder="选择模型..." />
         </SelectTrigger>
         <SelectContent className="max-h-[300px]">
           {models.length === 0 && !isLoading && (
