@@ -139,13 +139,14 @@ export async function GET(request: NextRequest) {
     let orderBy = 'created_at';
     let orderAscending = false;
     let useRandom = false;
+    let useComputedScore = false; // 是否使用计算评分排序
     
     switch (sortBy) {
-      case 'popular': // 按浏览量排序
-        orderBy = 'view_count';
+      case 'popular': // 按热度排序 = 浏览量 - 踩数*10
+        useComputedScore = true;
         break;
-      case 'likes': // 按点赞数排序
-        orderBy = 'like_count';
+      case 'likes': // 按净赞数排序 = 点赞数 - 踩数*2
+        useComputedScore = true;
         break;
       case 'random': // 随机排序
         useRandom = true;
@@ -233,8 +234,94 @@ export async function GET(request: NextRequest) {
       });
     }
     
-    // 非随机排序：正常查询
-    // 先尝试查询包含 width/height 列的数据，如果列不存在则回退
+    // 计算评分排序（最热、最多赞）
+    if (useComputedScore) {
+      // 获取总数
+      const { count } = await client
+        .from('images')
+        .select('*', { count: 'exact', head: true })
+        .eq('is_public', true)
+        .eq('status', 'completed')
+        .not('image_url', 'is', null);
+      
+      const totalCount = count || 0;
+      const totalPages = Math.ceil(totalCount / limit);
+      
+      // 获取所有图片用于计算评分排序
+      // 先尝试查询包含 width/height 列的数据
+      let allImages = null;
+      let queryError = null;
+      
+      const { data: dataWithDims, error: errorWithDims } = await client
+        .from('images')
+        .select('id, prompt, model, provider, image_url, thumbnail_url, is_public, created_at, config, view_count, like_count, create_count, dislike_count, width, height')
+        .eq('is_public', true)
+        .eq('status', 'completed')
+        .not('image_url', 'is', null);
+      
+      if (errorWithDims && errorWithDims.code === '42703') {
+        const { data: dataBasic, error: errorBasic } = await client
+          .from('images')
+          .select('id, prompt, model, provider, image_url, thumbnail_url, is_public, created_at, config, view_count, like_count, create_count, dislike_count')
+          .eq('is_public', true)
+          .eq('status', 'completed')
+          .not('image_url', 'is', null);
+        
+        allImages = dataBasic;
+        queryError = errorBasic;
+      } else {
+        allImages = dataWithDims;
+        queryError = errorWithDims;
+      }
+      
+      if (queryError) throw queryError;
+      
+      // 计算评分并排序
+      const scoredImages = (allImages || []).map((img: { 
+        id: string; 
+        view_count: number | null; 
+        like_count: number | null; 
+        dislike_count: number | null;
+      }) => {
+        const views = img.view_count || 0;
+        const likes = img.like_count || 0;
+        const dislikes = img.dislike_count || 0;
+        
+        // 计算评分
+        let score: number;
+        if (sortBy === 'popular') {
+          // 最热 = 浏览量 - 踩数*10（踩的影响更大）
+          score = views - dislikes * 10;
+        } else {
+          // 最多赞 = 点赞数 - 踩数*2（踩的影响更大）
+          score = likes - dislikes * 2;
+        }
+        
+        return { ...img, score };
+      });
+      
+      // 按评分降序排序
+      scoredImages.sort((a: { score: number }, b: { score: number }) => b.score - a.score);
+      
+      // 分页
+      const paginatedImages = scoredImages.slice(offset, offset + limit);
+      
+      // 处理图片数据
+      const images = await processImageData(paginatedImages, client, userToken);
+      
+      return NextResponse.json({
+        success: true,
+        images,
+        pagination: {
+          page,
+          limit,
+          total: totalCount,
+          totalPages,
+        },
+      });
+    }
+    
+    // 最新排序：正常查询
     let data = null;
     let error = null;
     
@@ -248,8 +335,6 @@ export async function GET(request: NextRequest) {
       .range(offset, offset + limit - 1);
     
     if (errorWithDims && errorWithDims.code === '42703') {
-      // 列不存在，回退到不查询 width/height
-      console.log('width/height columns not exist, falling back to basic query');
       const { data: dataBasic, error: errorBasic } = await client
         .from('images')
         .select('id, prompt, model, provider, image_url, thumbnail_url, is_public, created_at, config, view_count, like_count, create_count, dislike_count')
