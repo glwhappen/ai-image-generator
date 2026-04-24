@@ -211,6 +211,15 @@ async function generateImageAsync(
       errorMessage = '生成图片违规';
     }
     
+    // 检查是否为网络错误
+    if (errorMessage.toLowerCase().includes('fetch failed') ||
+        errorMessage.toLowerCase().includes('network') ||
+        errorMessage.toLowerCase().includes('econnrefused') ||
+        errorMessage.toLowerCase().includes('enotfound') ||
+        errorMessage.toLowerCase().includes('etimedout')) {
+      errorMessage = '网络连接失败，请检查网络或API地址是否正确';
+    }
+    
     // 更新状态为 failed
     await client
       .from('images')
