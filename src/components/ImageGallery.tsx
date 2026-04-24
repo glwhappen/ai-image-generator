@@ -40,6 +40,7 @@ interface ImageGalleryProps {
   onDeleteImage: (id: string) => void;
   onTogglePublic?: (id: string, isPublic: boolean) => void;
   onEdit?: (image: ImageRecord) => void;
+  onRetry?: (image: ImageRecord) => void;
   showStatus?: boolean;
 }
 
@@ -96,7 +97,7 @@ function StatusText({ status }: { status: ImageStatus }) {
   }
 }
 
-export function ImageGallery({ images, onDeleteImage, onTogglePublic, onEdit, showStatus = false }: ImageGalleryProps) {
+export function ImageGallery({ images, onDeleteImage, onTogglePublic, onEdit, onRetry, showStatus = false }: ImageGalleryProps) {
   const [selectedImage, setSelectedImage] = useState<ImageRecord | null>(null);
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [failedImages, setFailedImages] = useState<Set<string>>(new Set());
@@ -433,6 +434,20 @@ export function ImageGallery({ images, onDeleteImage, onTogglePublic, onEdit, sh
             {/* 操作按钮 - 失败状态 */}
             {image.status === 'failed' && (
               <div className="absolute top-2 right-2 flex gap-1">
+                {onRetry && (
+                  <Button
+                    variant="secondary"
+                    size="icon"
+                    className="h-7 w-7"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onRetry(image);
+                    }}
+                    title="重试"
+                  >
+                    <RefreshCw className="h-3.5 w-3.5" />
+                  </Button>
+                )}
                 {onEdit && (
                   <Button
                     variant="secondary"

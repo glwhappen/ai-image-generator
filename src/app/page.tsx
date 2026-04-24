@@ -2,7 +2,7 @@
 
 import { useState, useEffect, Suspense, useCallback, useRef } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
-import { useAppState } from '@/hooks/useAppState';
+import { useAppState, ImageRecord } from '@/hooks/useAppState';
 import { SettingsPanel, loadPromptTemplates, loadPromptLLMConfig } from '@/components/SettingsPanel';
 import { ImageGallery } from '@/components/ImageGallery';
 import { ProviderSelector } from '@/components/ProviderSelector';
@@ -45,6 +45,7 @@ function HomeContent() {
     getCurrentProviderConfig,
     fetchImages,
     submitGeneration,
+    retryGeneration,
     toggleImagePublic,
     deleteImage,
     updateUserId,
@@ -670,6 +671,19 @@ function HomeContent() {
     setError(null);
   };
 
+  // 重试失败的图片
+  const handleRetryImage = async (image: ImageRecord) => {
+    setIsSubmitting(true);
+    setError(null);
+    try {
+      await retryGeneration(image);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : '重试失败');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   if (!isLoaded) {
     return (
       <div className="flex h-screen items-center justify-center bg-background">
@@ -966,6 +980,7 @@ function HomeContent() {
                     onDeleteImage={deleteImage}
                     onTogglePublic={toggleImagePublic}
                     onEdit={handleEditImage}
+                    onRetry={handleRetryImage}
                     showStatus={true}
                   />
                 </CardContent>
@@ -996,6 +1011,7 @@ function HomeContent() {
                     onDeleteImage={deleteImage}
                     onTogglePublic={toggleImagePublic}
                     onEdit={handleEditImage}
+                    onRetry={handleRetryImage}
                     showStatus={true}
                   />
                 )}

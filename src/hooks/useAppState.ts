@@ -327,6 +327,60 @@ export function useAppState() {
       console.error('Failed to delete image:', error);
     }
   }, [userId]);
+
+  // 重试失败的图片生成
+  const retryGeneration = useCallback(async (image: ImageRecord): Promise<string | null> => {
+    if (!userId) return null;
+    
+    const config = image.config as Record<string, unknown> | null;
+    
+    try {
+      const requestBody: Record<string, unknown> = {
+        userId,
+        prompt: image.prompt,
+        model: image.model,
+        provider: image.provider,
+        aspectRatio: config?.aspectRatio,
+        imageSize: config?.imageSize,
+        size: config?.size,
+        doubaoSize: config?.doubaoSize,
+        referenceImageUrl: config?.referenceImageUrl,
+        isPublic: image.is_public,
+      };
+      
+      // 获取当前供应商配置
+      if (image.provider !== 'doubao') {
+        const currentConfig = apiConfig.providers[image.provider];
+        if (currentConfig) {
+          requestBody.baseUrl = currentConfig.baseUrl;
+          requestBody.apiKey = currentConfig.apiKey;
+        }
+      }
+      
+      const response = await fetch('/api/images/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(requestBody),
+      });
+      
+      const data = await response.json();
+      
+      if (data.success) {
+        // 标记有处理中的任务
+        hasPendingRef.current = true;
+        // 删除旧的失败记录
+        await deleteImage(image.id);
+        // 刷新图片列表
+        fetchImages();
+        return data.imageId;
+      } else {
+        throw new Error(data.error || '重试失败');
+      }
+    } catch (error) {
+      console.error('Failed to retry generation:', error);
+      throw error;
+    }
+  }, [userId, apiConfig.providers, fetchImages, deleteImage]);
   
   // 更新用户 ID（用于导入身份）
   const updateUserId = useCallback((newUserId: string) => {
@@ -349,6 +403,7 @@ export function useAppState() {
     getCurrentProviderConfig,
     fetchImages,
     submitGeneration,
+    retryGeneration,
     toggleImagePublic,
     deleteImage,
     updateUserId,
