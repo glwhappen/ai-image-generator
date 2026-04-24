@@ -191,7 +191,7 @@ async function generateImageAsync(
         })
         .eq('id', imageId);
     } else {
-      throw new Error('未生成图片');
+      throw new Error('图片生成失败，请重试');
     }
   } catch (error) {
     console.error('Generation failed:', error);

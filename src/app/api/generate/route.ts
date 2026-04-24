@@ -212,7 +212,7 @@ async function handleOpenAIRequest(body: GenerateRequest) {
 
   if (!imageData) {
     return NextResponse.json(
-      { error: '未生成图片，请重试' },
+      { error: '图片生成失败，请重试' },
       { status: 500 }
     );
   }
@@ -435,7 +435,7 @@ async function handleDoubaoRequest(body: GenerateRequest) {
 
   if (!imageData) {
     return NextResponse.json(
-      { error: '豆包未生成图片，请重试' },
+      { error: '图片生成失败，请重试' },
       { status: 500 }
     );
   }
