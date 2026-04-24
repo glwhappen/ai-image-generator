@@ -222,6 +222,7 @@ export function ModelSelector({
   return (
     <div className="flex items-center gap-2">
       <Select
+        key={currentProvider}
         value={selectedModel}
         onValueChange={(value) => {
           onModelChange(value);
