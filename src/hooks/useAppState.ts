@@ -40,7 +40,8 @@ export interface ApiConfigState {
   imageSize: string;
   openaiSize: string;
   doubaoSize: string;
-  useCustomSize: boolean;
+  useCustomSize: boolean;  // Gemini 自定义尺寸
+  useOpenaiCustomSize: boolean;  // OpenAI 自定义尺寸
 }
 
 const STORAGE_KEY = 'ai-image-generator-state';
@@ -77,6 +78,7 @@ const defaultApiConfig: ApiConfigState = {
   openaiSize: 'auto',
   doubaoSize: '2k',
   useCustomSize: false,
+  useOpenaiCustomSize: false,
 };
 
 export function useAppState() {
@@ -111,6 +113,7 @@ export function useAppState() {
           openaiSize: parsed.apiConfig?.openaiSize || 'auto',
           doubaoSize: parsed.apiConfig?.doubaoSize || '2k',
           useCustomSize: parsed.apiConfig?.useCustomSize || false,
+          useOpenaiCustomSize: parsed.apiConfig?.useOpenaiCustomSize || false,
         });
         
         // 读取自动公开设置
@@ -249,7 +252,7 @@ export function useAppState() {
         provider: apiConfig.currentProvider,
         aspectRatio: apiConfig.useCustomSize ? apiConfig.aspectRatio : undefined,
         imageSize: apiConfig.useCustomSize ? apiConfig.imageSize : undefined,
-        size: apiConfig.useCustomSize && apiConfig.openaiSize !== 'auto' ? apiConfig.openaiSize : undefined,
+        size: apiConfig.useOpenaiCustomSize && apiConfig.openaiSize !== 'auto' ? apiConfig.openaiSize : undefined,
         doubaoSize: apiConfig.useCustomSize ? apiConfig.doubaoSize : undefined,
         referenceImage: referenceImage?.base64,
         referenceImageMime: referenceImage?.mimeType,
@@ -407,5 +410,10 @@ export function useAppState() {
     toggleImagePublic,
     deleteImage,
     updateUserId,
+    // 暴露自定义尺寸状态
+    useCustomSize: apiConfig.useCustomSize,
+    useOpenaiCustomSize: apiConfig.useOpenaiCustomSize,
+    setUseCustomSize: (value: boolean) => updateApiConfig({ useCustomSize: value }),
+    setUseOpenaiCustomSize: (value: boolean) => updateApiConfig({ useOpenaiCustomSize: value }),
   };
 }

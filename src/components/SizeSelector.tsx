@@ -25,6 +25,7 @@ interface SizeSelectorProps {
   // 豆包参数
   doubaoSize: string;
   useCustomSize: boolean;
+  useOpenaiCustomSize?: boolean;
   apiKey: string;
   onSizeChange: (params: {
     aspectRatio?: string;
@@ -32,6 +33,7 @@ interface SizeSelectorProps {
     openaiSize?: string;
     doubaoSize?: string;
     useCustomSize?: boolean;
+    useOpenaiCustomSize?: boolean;
   }) => void;
 }
 
@@ -40,22 +42,42 @@ function isValidAspectRatio(value: string): boolean {
   return /^\d+(\.\d+)?:\d+(\.\d+)?$/.test(value);
 }
 
+// 验证 OpenAI 尺寸格式（如 "1536x1024", "1024x1024"）
+function isValidOpenAISize(value: string): boolean {
+  // 格式: 宽x高，宽高都是数字，范围大约 256-4096
+  const match = /^(\d+)x(\d+)$/i.exec(value);
+  if (!match) return false;
+  const width = parseInt(match[1], 10);
+  const height = parseInt(match[2], 10);
+  // OpenAI 支持的尺寸范围大约是 256-4096
+  return width >= 256 && width <= 4096 && height >= 256 && height <= 4096;
+}
+
 export function SizeSelector({ 
   provider, 
   aspectRatio, 
   imageSize, 
   openaiSize,
   doubaoSize,
-  useCustomSize, 
+  useCustomSize,
+  useOpenaiCustomSize = false,
   apiKey, 
   onSizeChange 
 }: SizeSelectorProps) {
   // 判断当前是否是自定义宽高比
   const isCustomAspect = aspectRatio && !ASPECT_RATIOS.some(r => r.value === aspectRatio);
   
+  // 判断当前是否是自定义 OpenAI 尺寸
+  const isCustomOpenAISize = openaiSize && !OPENAI_SIZES.some(s => s.value === openaiSize);
+  
   const [showCustomInput, setShowCustomInput] = useState(!!isCustomAspect);
   const [customAspectRatio, setCustomAspectRatio] = useState(isCustomAspect ? aspectRatio : '');
   const [customError, setCustomError] = useState('');
+  
+  // OpenAI 自定义尺寸状态
+  const [showCustomOpenAIInput, setShowCustomOpenAIInput] = useState(!!isCustomOpenAISize);
+  const [customOpenAISize, setCustomOpenAISize] = useState(isCustomOpenAISize ? openaiSize : '');
+  const [customOpenAIError, setCustomOpenAIError] = useState('');
   
   const handleCustomSizeChange = (checked: boolean) => {
     onSizeChange({ useCustomSize: checked });
@@ -94,7 +116,34 @@ export function SizeSelector({
   };
 
   const handleOpenAISizeChange = (value: string) => {
-    onSizeChange({ openaiSize: value });
+    if (value === 'custom') {
+      setShowCustomOpenAIInput(true);
+      // 如果已有自定义值，保持；否则等待输入
+      if (customOpenAISize && isValidOpenAISize(customOpenAISize)) {
+        onSizeChange({ openaiSize: customOpenAISize });
+      }
+    } else {
+      setShowCustomOpenAIInput(false);
+      setCustomOpenAISize('');
+      setCustomOpenAIError('');
+      onSizeChange({ openaiSize: value });
+    }
+  };
+
+  const handleCustomOpenAISizeChange = (value: string) => {
+    setCustomOpenAISize(value);
+    
+    if (!value) {
+      setCustomOpenAIError('');
+      return;
+    }
+    
+    if (isValidOpenAISize(value)) {
+      setCustomOpenAIError('');
+      onSizeChange({ openaiSize: value });
+    } else {
+      setCustomOpenAIError('格式错误，请使用 宽x高 格式（如 1536x1024）');
+    }
   };
 
   const handleDoubaoSizeChange = (value: string) => {
@@ -253,7 +302,7 @@ export function SizeSelector({
                   <Monitor className="h-3 w-3" />
                   图片尺寸
                 </Label>
-                <Select value={openaiSize} onValueChange={handleOpenAISizeChange}>
+                <Select value={showCustomOpenAIInput ? 'custom' : openaiSize} onValueChange={handleOpenAISizeChange}>
                   <SelectTrigger className="w-full h-8">
                     <SelectValue placeholder="选择尺寸" />
                   </SelectTrigger>
@@ -268,8 +317,32 @@ export function SizeSelector({
                         </div>
                       </SelectItem>
                     ))}
+                    <SelectItem value="custom">
+                      <div className="flex items-center gap-2">
+                        <Settings2 className="h-3.5 w-3.5" />
+                        <span className="font-medium">自定义尺寸</span>
+                      </div>
+                    </SelectItem>
                   </SelectContent>
                 </Select>
+                
+                {/* 自定义尺寸输入 */}
+                {showCustomOpenAIInput && (
+                  <div className="space-y-1.5">
+                    <Input
+                      placeholder="输入尺寸，如 1536x1024"
+                      value={customOpenAISize}
+                      onChange={(e) => handleCustomOpenAISizeChange(e.target.value)}
+                      className={`h-8 ${customOpenAIError ? 'border-destructive' : ''}`}
+                    />
+                    {customOpenAIError && (
+                      <p className="text-xs text-destructive">{customOpenAIError}</p>
+                    )}
+                    <p className="text-xs text-muted-foreground">
+                      格式: 宽x高，支持范围 256-4096
+                    </p>
+                  </div>
+                )}
               </div>
             </>
           )}
@@ -284,7 +357,7 @@ export function SizeSelector({
                   ? (aspectRatio === 'auto' 
                       ? `${imageSize}（自动比例）` 
                       : `${aspectRatio} · ${imageSize}`)
-                  : openaiSize
+                  : (showCustomOpenAIInput && customOpenAISize ? customOpenAISize : openaiSize)
               }
             </span>
           </div>
