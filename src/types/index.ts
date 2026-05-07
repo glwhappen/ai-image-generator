@@ -135,6 +135,7 @@ export const ASPECT_RATIOS: AspectRatioOption[] = [
   { id: '9:16', label: '竖版 9:16', value: '9:16', description: '适合手机壁纸' },
   { id: '3:2', label: '横版 3:2', value: '3:2', description: '适合照片' },
   { id: '2:3', label: '竖版 2:3', value: '2:3', description: '适合社交媒体' },
+  { id: '2.35:1', label: '宽幅 2.35:1', value: '2.35:1', description: '微信公众号头图' },
 ];
 
 // OpenAI 尺寸选项
@@ -143,6 +144,8 @@ export const OPENAI_SIZES: OpenAISizeOption[] = [
   { id: '1024x1024', label: '正方形', value: '1024x1024', description: '1024×1024' },
   { id: '1536x1024', label: '横版', value: '1536x1024', description: '1536×1024' },
   { id: '1024x1536', label: '竖版', value: '1024x1536', description: '1024×1536' },
+  { id: '2048x871', label: '宽幅 2.35:1', value: '2048x871', description: '微信公众号头图' },
+  { id: 'custom', label: '自定义尺寸', value: 'custom', description: '自定义宽高' },
 ];
 
 // 豆包尺寸选项
