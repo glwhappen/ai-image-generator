@@ -139,14 +139,32 @@ export const ASPECT_RATIOS: AspectRatioOption[] = [
 ];
 
 // OpenAI 尺寸选项
+// 尺寸限制规则：
+// 1. 图片最大边长 ≤ 3840px
+// 2. 宽高两边像素均为 16px 的倍数
+// 3. 长边 / 短边 比值 ≤ 3:1
+// 4. 总像素范围：最小 655360 ~ 最大 8294400
 export const OPENAI_SIZES: OpenAISizeOption[] = [
   { id: 'auto', label: '自动', value: 'auto', description: '模型自动选择' },
   { id: '1024x1024', label: '正方形', value: '1024x1024', description: '1024×1024' },
   { id: '1536x1024', label: '横版', value: '1536x1024', description: '1536×1024' },
   { id: '1024x1536', label: '竖版', value: '1024x1536', description: '1024×1536' },
+  { id: '2048x2048', label: '2K正方形', value: '2048x2048', description: '2048×2048' },
+  { id: '2048x1152', label: '2K横版', value: '2048x1152', description: '2048×1152' },
+  { id: '3840x2160', label: '4K横版', value: '3840x2160', description: '3840×2160' },
+  { id: '2160x3840', label: '4K竖版', value: '2160x3840', description: '2160×3840' },
   { id: '2048x871', label: '宽幅 2.35:1', value: '2048x871', description: '微信公众号头图' },
   { id: 'custom', label: '自定义尺寸', value: 'custom', description: '自定义宽高' },
 ];
+
+// OpenAI 尺寸验证规则
+export const OPENAI_SIZE_RULES = {
+  maxEdge: 3840,           // 最大边长
+  minPixels: 655360,       // 最小总像素
+  maxPixels: 8294400,      // 最大总像素
+  maxRatio: 3,             // 长短边最大比值
+  multipleOf: 16,          // 像素必须是16的倍数
+};
 
 // 豆包尺寸选项
 export const DOUBAO_SIZES: DoubaoSizeOption[] = [

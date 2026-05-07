@@ -43,14 +43,54 @@ function isValidAspectRatio(value: string): boolean {
 }
 
 // 验证 OpenAI 尺寸格式（如 "1536x1024", "1024x1024"）
-function isValidOpenAISize(value: string): boolean {
-  // 格式: 宽x高，宽高都是数字，范围大约 256-4096
+// GPT 图片尺寸严格限制规则：
+// 1. 图片最大边长 ≤ 3840px
+// 2. 宽高两边像素均为 16px 的倍数
+// 3. 长边 / 短边 比值 ≤ 3:1
+// 4. 总像素范围：最小 655360 ~ 最大 8294400
+function isValidOpenAISize(value: string): { valid: boolean; error?: string } {
   const match = /^(\d+)x(\d+)$/i.exec(value);
-  if (!match) return false;
+  if (!match) {
+    return { valid: false, error: '格式错误，请使用 宽x高 格式（如 1536x1024）' };
+  }
+  
   const width = parseInt(match[1], 10);
   const height = parseInt(match[2], 10);
-  // OpenAI 支持的尺寸范围大约是 256-4096
-  return width >= 256 && width <= 4096 && height >= 256 && height <= 4096;
+  
+  // 规则1: 最大边长 ≤ 3840px
+  const maxSide = Math.max(width, height);
+  if (maxSide > 3840) {
+    return { valid: false, error: `最大边长不能超过 3840px（当前 ${maxSide}px）` };
+  }
+  
+  // 规则2: 宽高都是 16 的倍数
+  if (width % 16 !== 0 || height % 16 !== 0) {
+    return { valid: false, error: '宽高都必须是 16 的倍数' };
+  }
+  
+  // 规则3: 长边/短边比值 ≤ 3:1
+  const minSide = Math.min(width, height);
+  const ratio = maxSide / minSide;
+  if (ratio > 3) {
+    return { valid: false, error: `宽高比不能超过 3:1（当前 ${ratio.toFixed(2)}:1）` };
+  }
+  
+  // 规则4: 总像素范围 655360 ~ 8294400
+  const totalPixels = width * height;
+  if (totalPixels < 655360) {
+    return { valid: false, error: `总像素不能小于 655360（当前 ${totalPixels}）` };
+  }
+  if (totalPixels > 8294400) {
+    return { valid: false, error: `总像素不能超过 8294400（当前 ${totalPixels}）` };
+  }
+  
+  return { valid: true };
+}
+
+// 简单的布尔版本，用于快速检查
+function isValidOpenAISizeSimple(value: string): boolean {
+  const result = isValidOpenAISize(value);
+  return result.valid;
 }
 
 export function SizeSelector({ 
@@ -119,7 +159,7 @@ export function SizeSelector({
     if (value === 'custom') {
       setShowCustomOpenAIInput(true);
       // 如果已有自定义值，保持；否则等待输入
-      if (customOpenAISize && isValidOpenAISize(customOpenAISize)) {
+      if (customOpenAISize && isValidOpenAISizeSimple(customOpenAISize)) {
         onSizeChange({ openaiSize: customOpenAISize });
       }
     } else {
@@ -138,11 +178,12 @@ export function SizeSelector({
       return;
     }
     
-    if (isValidOpenAISize(value)) {
+    const validation = isValidOpenAISize(value);
+    if (validation.valid) {
       setCustomOpenAIError('');
       onSizeChange({ openaiSize: value });
     } else {
-      setCustomOpenAIError('格式错误，请使用 宽x高 格式（如 1536x1024）');
+      setCustomOpenAIError(validation.error || '格式错误');
     }
   };
 
