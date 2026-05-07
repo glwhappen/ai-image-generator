@@ -139,7 +139,9 @@ async function uploadFile(
   
   // COZE 托管存储：使用 coze-coding-dev-sdk
   if (isCozeManagedStorage()) {
-    const { S3Storage } = await import("coze-coding-dev-sdk");
+    // 使用 eval('require') 绕过 webpack 的静态分析
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const { S3Storage } = eval('require')('coze-coding-dev-sdk');
     const config = getStorageConfig();
     const storage = new S3Storage({
       endpointUrl: config.endpointUrl,
@@ -241,7 +243,9 @@ export async function getImageUrl(key: string, expireTime = 86400 * 30): Promise
   // COZE 托管存储：使用 coze-coding-dev-sdk
   if (isCozeManagedStorage()) {
     try {
-      const { S3Storage } = await import("coze-coding-dev-sdk");
+      // 使用 eval('require') 绕过 webpack 的静态分析
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
+      const { S3Storage } = eval('require')('coze-coding-dev-sdk');
       const config = getStorageConfig();
       const storage = new S3Storage({
         endpointUrl: config.endpointUrl,
