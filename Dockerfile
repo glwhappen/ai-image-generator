@@ -15,9 +15,9 @@ RUN set -ex && \
         sed -i 's|deb.debian.org|mirrors.aliyun.com|g' /etc/apt/sources.list; \
     fi
 
-# 安装 pnpm 并配置淘宝镜像
-RUN corepack enable && corepack prepare pnpm@latest --activate
-RUN pnpm config set registry https://registry.npmmirror.com
+# 安装 pnpm 并配置淘宝镜像（合并到一层，确保 pnpm 正确初始化）
+RUN corepack enable && corepack prepare pnpm@latest --activate && \
+    pnpm config set registry https://registry.npmmirror.com
 
 # 复制依赖配置文件并安装依赖
 COPY package.json pnpm-lock.yaml ./
