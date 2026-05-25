@@ -47,9 +47,13 @@ async function fetchModels(baseUrl: string, apiKey: string, provider?: string): 
 
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;
-  const baseUrl = searchParams.get('baseUrl') || 'https://ai.nflow.red';
-  const apiKey = searchParams.get('apiKey') || process.env.OPENAI_API_KEY || 'sk-V7ZFfhmndbAQXklSz2IC7gV68WGggGC5nxnlv0cXRq6ob3DN';
+  const baseUrl = searchParams.get('baseUrl') || process.env.OPENAI_BASE_URL || '';
+  const apiKey = searchParams.get('apiKey') || process.env.OPENAI_API_KEY || '';
   const provider = searchParams.get('provider') || undefined;
+  
+  if (!baseUrl || !apiKey) {
+    return NextResponse.json({ models: [], error: '请配置 API Base URL 和 Key' });
+  }
   
   // 获取模型列表
   const models = await fetchModels(baseUrl, apiKey, provider);

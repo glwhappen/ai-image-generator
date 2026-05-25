@@ -54,14 +54,14 @@ const DEFAULT_DOUBAO_CONFIG: ProviderConfig = {
 };
 
 const DEFAULT_GEMINI_CONFIG: ProviderConfig = {
-  baseUrl: 'https://ai.nflow.red',
-  apiKey: 'sk-OQElE8IYLAryIy92mdyfnzvjCcgtRrMJk5hIGLgH0QbkEfYC',
+  baseUrl: '', // 用户需要自行配置
+  apiKey: '', // 用户需要自行配置 API Key
   enabled: true,
 };
 
 const DEFAULT_OPENAI_CONFIG: ProviderConfig = {
-  baseUrl: 'https://ai.nflow.red',
-  apiKey: 'sk-V7ZFfhmndbAQXklSz2IC7gV68WGggGC5nxnlv0cXRq6ob3DN',
+  baseUrl: '', // 用户需要自行配置
+  apiKey: '', // 用户需要自行配置 API Key
   enabled: true,
 };
 

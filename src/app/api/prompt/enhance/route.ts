@@ -88,7 +88,14 @@ export async function POST(request: NextRequest) {
     const apiUrl = `${baseUrl}/v1/chat/completions`;
     
     // 如果用户提供了 API Key，使用用户的；否则使用环境变量中的默认 Key
-    const apiKey = llmApiKey || process.env.OPENAI_API_KEY || 'sk-V7ZFfhmndbAQXklSz2IC7gV68WGggGC5nxnlv0cXRq6ob3DN';
+    const apiKey = llmApiKey || process.env.OPENAI_API_KEY || '';
+    
+    if (!apiKey) {
+      return NextResponse.json(
+        { error: '请配置 LLM API Key' },
+        { status: 400 }
+      );
+    }
     
     const response = await fetch(apiUrl, {
       method: 'POST',

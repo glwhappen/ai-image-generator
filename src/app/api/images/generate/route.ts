@@ -245,7 +245,12 @@ async function generateImageAsync(
 
 // 调用豆包格式的 API（Coze 集成）
 const DOUBAO_API_URL = 'https://integration.coze.cn/api/v3/images/generations';
-const DOUBAO_BEARER_TOKEN = 'Bearer UXFMU2luMGp4MzlZNmQzVlhtWTdISkFjV25idHRCY3g6UDhzRXpNTDJ4d1E4N3FOSlNVaHpyMElBeFdkbTUzZFNYR2hnVXBrSDI0S2ZCZnd5ajV4d0IyMHp1SURqYnNGNg==';
+
+// 获取豆包 Bearer Token（从环境变量）
+function getDoubaoToken(): string {
+  const token = process.env.DOUBAO_BEARER_TOKEN || '';
+  return token ? `Bearer ${token}` : '';
+}
 
 async function callDoubao(params: {
   prompt: string;
@@ -253,6 +258,11 @@ async function callDoubao(params: {
   doubaoSize?: string;
 }): Promise<string | null> {
   const { prompt, model, doubaoSize } = params;
+  
+  const bearerToken = getDoubaoToken();
+  if (!bearerToken) {
+    throw new Error('豆包 API 未配置，请设置 DOUBAO_BEARER_TOKEN 环境变量');
+  }
   
   const requestBody: Record<string, unknown> = {
     model,
@@ -266,7 +276,7 @@ async function callDoubao(params: {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'Authorization': DOUBAO_BEARER_TOKEN,
+      'Authorization': bearerToken,
     },
     body: JSON.stringify(requestBody),
   });
