@@ -4,7 +4,7 @@
 # ============================================
 
 # 阶段 1: 构建
-FROM node:20-slim AS builder
+FROM node:22-slim AS builder
 WORKDIR /app
 
 # 使用阿里云镜像加速（兼容 Debian 12 新格式）
@@ -15,7 +15,7 @@ RUN set -ex && \
         sed -i 's|deb.debian.org|mirrors.aliyun.com|g' /etc/apt/sources.list; \
     fi
 
-# 安装 pnpm 并配置淘宝镜像（合并到一层，确保 pnpm 正确初始化）
+# 安装 pnpm 并配置淘宝镜像
 RUN corepack enable && corepack prepare pnpm@latest --activate && \
     pnpm config set registry https://registry.npmmirror.com
 
@@ -40,7 +40,7 @@ RUN npx next build
 
 # ============================================
 # 阶段 2: 运行
-FROM node:20-slim AS runner
+FROM node:22-slim AS runner
 WORKDIR /app
 
 # 使用阿里云镜像加速（兼容 Debian 12 新格式）
